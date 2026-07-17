@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>물품선정 및 업체추천 사유 자동생성</title>
+  <style>
+    :root {
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --line: #d8dde6;
+      --text: #172033;
+      --muted: #647084;
+      --soft: #eef3f8;
+      --accent: #146a5d;
+      --accent-dark: #0d5147;
+      --warn: #996515;
+      --radius: 8px;
+      --shadow: 0 12px 30px rgba(23,32,51,.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Malgun Gothic","Apple SD Gothic Neo",Arial,sans-serif;
+      line-height: 1.5;
+    }
+    button, input, textarea, select { font: inherit; }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    h1 { margin: 0; font-size: 21px; }
+    .header-sub { color: var(--muted); font-size: 13px; }
+
+    main {
+      padding: 20px 24px 32px;
+      display: grid;
+      grid-template-columns: minmax(340px,.95fr) minmax(400px,1.05fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel + .panel { margin-top: 16px; }
+
+    .panel-head {
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfd;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    h2 { margin: 0; font-size: 15px; }
+
+    .panel-body { padding: 16px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    .field { display: grid; gap: 5px; min-width: 0; }
+    .field.full { grid-column: 1 / -1; }
+
+    label { font-size: 13px; font-weight: 700; color: #263247; }
+
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--text);
+      background: #fff;
+      padding: 8px 10px;
+      outline: none;
+      min-height: 38px;
+    }
+    textarea { resize: vertical; min-height: 80px; }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(20,106,93,.14);
+    }
+
+    .upload-zone {
+      border: 2px dashed #aab5c5;
+      background: var(--soft);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .upload-zone:hover, .upload-zone.over {
+      border-color: var(--accent);
+      background: #e8f4f1;
+    }
+    .upload-zone input[type=file] { display: none; }
+    .upload-label { font-size: 14px; color: var(--muted); margin-top: 6px; }
+    .upload-label strong { color: var(--accent); cursor: pointer; }
+
+    .status {
+      margin-top: 10px;
+      padding: 8px 11px;
+      border-radius: 6px;
+      font-size: 13px;
+      background: #f3f4f6;
+      color: var(--muted);
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status.good { background: #f0faf6; color: var(--accent-dark); }
+    .status.warn { background: #fff8e9; color: var(--warn); }
+    .status.error { background: #fff0ef; color: #a83b31; }
+
+    .spinner {
+      width: 15px; height: 15px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      border-radius: 6px;
+      min-height: 36px;
+      padding: 7px 12px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    button:hover { border-color: #9aa8bb; background: #f8fafc; }
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      min-height: 40px;
+      padding: 9px 18px;
+    }
+    .btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+    .btn-primary:disabled { background: #9ab8b4; border-color: #9ab8b4; cursor: not-allowed; }
+    .btn-sm { min-height: 30px; padding: 4px 9px; font-size: 12px; }
+    .btn-ghost { background: transparent; }
+
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+    .result-area { display: grid; gap: 14px; }
+    .result-block textarea { min-height: 130px; }
+    .result-block:first-child textarea { min-height: 46px; }
+    .field-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+
+    .notice {
+      border-top: 1px solid var(--line);
+      background: #fbfcfd;
+      padding: 11px 16px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stack { display: grid; gap: 16px; }
+
+    @media (max-width: 960px) {
+      main { grid-template-columns: 1fr; padding: 14px; }
+    }
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>물품선정 및 업체추천 사유 자동생성</h1>
+  </div>
+  <div class="header-sub" id="exampleCount">예제 데이터 확인 중...</div>
+</header>
+
+<main>
+  <!-- 왼쪽: 입력 -->
+  <div class="stack">
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>견적서 업로드</h2>
+      </div>
+      <div class="panel-body">
+        <div class="upload-zone" id="dropZone">
+          <input type="file" id="quotationFile" accept=".xlsx,.xls,.pdf,.csv,.txt">
+          <div style="font-size:28px">📄</div>
+          <div class="upload-label">여기에 파일을 끌어다 놓거나 <strong onclick="document.getElementById('quotationFile').click()">파일 선택</strong></div>
+          <div class="upload-label" style="font-size:12px">Excel (.xlsx/.xls) · PDF · CSV · TXT</div>
+        </div>
+        <div class="status" id="fileStatus">파일 업로드 후 Claude가 자동으로 품명과 업체 정보를 추출합니다.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>견적서 추출 정보</h2>
+        <button class="btn-sm btn-ghost" id="clearQuote">비우기</button>
+      </div>
+      <div class="panel-body">
+        <div class="grid">
+          <div class="field full">
+            <label for="itemName">품명 <span style="color:var(--warn)">*</span></label>
+            <input id="itemName" autocomplete="off" placeholder="견적서 업로드 후 자동 입력">
+          </div>
+          <div class="field full">
+            <label for="spec">규격 / 모델명</label>
+            <input id="spec" autocomplete="off" placeholder="자동 입력">
+          </div>
+          <div class="field">
+            <label for="vendor">업체명</label>
+            <input id="vendor" autocomplete="off" placeholder="자동 입력">
+          </div>
+          <div class="field">
+            <label for="vendorContact">담당자</label>
+            <input id="vendorContact" autocomplete="off" placeholder="자동 입력">
+          </div>
+          <div class="field">
+            <label for="vendorPhone">전화번호</label>
+            <input id="vendorPhone" autocomplete="off" placeholder="자동 입력">
+          </div>
+          <div class="field">
+            <label for="amount">금액</label>
+            <input id="amount" autocomplete="off" placeholder="자동 입력">
+          </div>
+          <div class="field">
+            <label for="quantity">수량</label>
+            <input id="quantity" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="unit">단위</label>
+            <input id="unit" autocomplete="off">
+          </div>
+          <div class="field full">
+            <label for="quotationDate">견적일자</label>
+            <input id="quotationDate" autocomplete="off" placeholder="자동 입력">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>과제 정보</h2>
+        <button class="btn-sm btn-ghost" id="clearProject">비우기</button>
+      </div>
+      <div class="panel-body">
+        <div class="grid">
+          <div class="field">
+            <label for="principal">연구책임자</label>
+            <input id="principal" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="account">과제계정</label>
+            <input id="account" autocomplete="off">
+          </div>
+          <div class="field full">
+            <label for="projectName">과제명</label>
+            <input id="projectName" autocomplete="off">
+          </div>
+          <div class="field full">
+            <label for="purpose">구매 목적 / 활용 용도</label>
+            <textarea id="purpose"></textarea>
+          </div>
+          <div class="field full">
+            <label for="notes">추가 요청사항</label>
+            <textarea id="notes" style="min-height:60px"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 오른쪽: 결과 -->
+  <div class="panel">
+    <div class="panel-head">
+      <h2>생성 결과</h2>
+      <div class="toolbar">
+        <button class="btn-primary" id="generateBtn">생성</button>
+        <button id="copyAllBtn">전체 복사</button>
+        <button id="downloadTxtBtn">텍스트 저장</button>
+      </div>
+    </div>
+    <div class="panel-body result-area">
+      <div class="status" id="genStatus">품명과 과제 정보를 입력한 후 생성 버튼을 누르세요.</div>
+
+      <div class="result-block">
+        <div class="field-head">
+          <label for="outItem">품명</label>
+          <button class="btn-sm" data-copy="outItem">복사</button>
+        </div>
+        <textarea id="outItem" readonly></textarea>
+      </div>
+
+      <div class="result-block">
+        <div class="field-head">
+          <label for="outSelection">물품선정사유</label>
+          <button class="btn-sm" data-copy="outSelection">복사</button>
+        </div>
+        <textarea id="outSelection" readonly></textarea>
+      </div>
+
+      <div class="result-block">
+        <div class="field-head">
+          <label for="outVendor">업체추천사유</label>
+          <button class="btn-sm" data-copy="outVendor">복사</button>
+        </div>
+        <textarea id="outVendor" readonly></textarea>
+      </div>
+    </div>
+    <div class="notice">
+      입력하지 않은 사실은 임의로 채우지 않습니다. 생성 후 반드시 내용을 검토하고 필요 시 직접 수정하세요.
+    </div>
+  </div>
+</main>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  // ── 예제 수 표시 ────────────────────────────────────────────────────────────
+  fetch("/api/example-count")
+    .then(r => r.json())
+    .then(d => { $("exampleCount").textContent = `예제 데이터: ${d.count}개`; })
+    .catch(() => { $("exampleCount").textContent = "예제 데이터: 없음 (extract_examples.py 실행 필요)"; });
+
+  // ── 파일 업로드 ─────────────────────────────────────────────────────────────
+  const dropZone = $("dropZone");
+  const fileInput = $("quotationFile");
+
+  dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("over"); });
+  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("over"));
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.classList.remove("over");
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+  fileInput.addEventListener("change", e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  function setStatus(id, msg, type = "") {
+    const el = $(id);
+    el.className = `status ${type}`.trim();
+    el.innerHTML = type === "loading"
+      ? `<span class="spinner"></span>${msg}`
+      : msg;
+  }
+
+  async function handleFile(file) {
+    setStatus("fileStatus", `${file.name} 분석 중...`, "loading");
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const res = await fetch("/api/extract", { method: "POST", body: form });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || res.statusText);
+      }
+      const d = await res.json();
+      fillField("itemName", d["품명"]);
+      fillField("spec", d["규격"]);
+      fillField("vendor", d["업체명"]);
+      fillField("vendorContact", d["담당자"]);
+      fillField("vendorPhone", d["전화번호"]);
+      fillField("amount", d["금액"]);
+      fillField("quotationDate", d["견적일자"]);
+      $("rawText") && ($("rawText").value = d.raw_text || "");
+      setStatus("fileStatus",
+        `<strong>${file.name}</strong> 추출 완료 — 품명: <strong>${d["품명"] || "(없음)"}</strong>`,
+        d["품명"] ? "good" : "warn"
+      );
+    } catch (e) {
+      setStatus("fileStatus", `오류: ${e.message}`, "error");
+    }
+  }
+
+  function fillField(id, value) {
+    if (value && $(id)) $(id).value = value;
+  }
+
+  // ── 생성 ────────────────────────────────────────────────────────────────────
+  $("generateBtn").addEventListener("click", async () => {
+    const itemName = $("itemName").value.trim();
+    if (!itemName) {
+      setStatus("genStatus", "품명을 입력하거나 견적서를 업로드하세요.", "warn");
+      return;
+    }
+    $("generateBtn").disabled = true;
+    setStatus("genStatus", "Claude가 문서를 작성 중입니다...", "loading");
+
+    const payload = {
+      principal: $("principal").value.trim(),
+      account: $("account").value.trim(),
+      projectName: $("projectName").value.trim(),
+      purpose: $("purpose").value.trim(),
+      notes: $("notes").value.trim(),
+      vendor: $("vendor").value.trim(),
+      vendorContact: $("vendorContact").value.trim(),
+      vendorPhone: $("vendorPhone").value.trim(),
+      itemName,
+      spec: $("spec").value.trim(),
+      quantity: $("quantity").value.trim(),
+      unit: $("unit").value.trim(),
+      amount: $("amount").value.trim(),
+      quotationDate: $("quotationDate").value.trim(),
+    };
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || res.statusText);
+      }
+      const d = await res.json();
+      $("outItem").value = d["품명출력"] || itemName;
+      $("outSelection").value = d["물품선정사유"] || "";
+      $("outVendor").value = d["업체추천사유"] || "";
+      setStatus("genStatus", "생성 완료.", "good");
+    } catch (e) {
+      setStatus("genStatus", `생성 오류: ${e.message}`, "error");
+    } finally {
+      $("generateBtn").disabled = false;
+    }
+  });
+
+  // ── 복사 / 저장 ─────────────────────────────────────────────────────────────
+  async function copyText(text) {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const t = document.createElement("textarea");
+      t.value = text; document.body.appendChild(t); t.select();
+      document.execCommand("copy"); t.remove();
+    }
+  }
+
+  document.querySelectorAll("[data-copy]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      await copyText($(btn.dataset.copy).value);
+      setStatus("genStatus", "복사했습니다.", "good");
+    });
+  });
+
+  $("copyAllBtn").addEventListener("click", async () => {
+    const text = [
+      "품명\n" + $("outItem").value,
+      "물품선정사유\n" + $("outSelection").value,
+      "업체추천사유\n" + $("outVendor").value,
+    ].join("\n\n");
+    await copyText(text);
+    setStatus("genStatus", "전체 복사했습니다.", "good");
+  });
+
+  $("downloadTxtBtn").addEventListener("click", () => {
+    const text = [
+      "품명\n" + $("outItem").value,
+      "물품선정사유\n" + $("outSelection").value,
+      "업체추천사유\n" + $("outVendor").value,
+    ].join("\n\n");
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url;
+    a.download = "물품선정사유.txt";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  // ── 비우기 ──────────────────────────────────────────────────────────────────
+  $("clearQuote").addEventListener("click", () => {
+    ["itemName","spec","vendor","vendorContact","vendorPhone","amount","quantity","unit","quotationDate"].forEach(id => $(id).value = "");
+    $("quotationFile").value = "";
+    setStatus("fileStatus", "파일 업로드 후 Claude가 자동으로 품명과 업체 정보를 추출합니다.");
+  });
+  $("clearProject").addEventListener("click", () => {
+    const ids = ["principal","account","projectName","purpose","notes"];
+    ids.forEach(id => $(id).value = "");
+    saveProject();
+  });
+
+  // ── 과제 정보 자동 저장/복원 (localStorage) ──────────────────────────────────
+  const PROJECT_KEY = "justification_project";
+  const PROJECT_FIELDS = ["principal","account","projectName","purpose","notes"];
+
+  function saveProject() {
+    const data = {};
+    PROJECT_FIELDS.forEach(id => { data[id] = $(id).value; });
+    localStorage.setItem(PROJECT_KEY, JSON.stringify(data));
+  }
+
+  function loadProject() {
+    try {
+      const raw = localStorage.getItem(PROJECT_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      PROJECT_FIELDS.forEach(id => { if (data[id]) $(id).value = data[id]; });
+    } catch {}
+  }
+
+  PROJECT_FIELDS.forEach(id => {
+    $(id).addEventListener("input", saveProject);
+  });
+
+  loadProject();
+</script>
+</body>
+</html>
