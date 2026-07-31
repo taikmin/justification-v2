@@ -121,10 +121,29 @@ LLM 출력은 비결정적이라, 로그 없이는 재현조차 어렵다.
 
 ## 7. 새 PC에서 놓치기 쉬운 것들
 
-- **`.gitignore`에 `.venv/`가 없다.** venv를 만들면 git에 잡히니 추가할 것.
+**git / GitHub 도구 — 첫 커밋 시점에 터진다**
+
+```powershell
+git config --global user.name "taikmin"
+git config --global user.email "lee.taikmin@gmail.com"
+winget install --id GitHub.cli -e --accept-package-agreements --accept-source-agreements
+```
+
+- **git identity가 없으면 `git commit`이 실패한다.**
+  `Author identity unknown ... unable to auto-detect email address`.
+  커밋할 게 다 준비된 시점에야 터지므로 미리 설정해 둘 것.
+- **`gh` CLI가 없다.** 저장소 공개 여부 확인, PR 생성 등이 막힌다.
+  급하면 `https://api.github.com/repos/<owner>/<repo>`로 우회 가능하지만
+  (`visibility` 필드), 설치해 두는 편이 낫다.
+
+**그 외**
+
+- **`.gitignore`에 `.venv/`가 없었다.** venv를 만들면 git에 잡히니 추가할 것. (수정 완료)
 - `claude` CLI는 로그인 상태가 PC마다 다르다. `claude` 한 번 실행해 인증 확인.
 - MCP 커넥터(claude.ai Gmail/Google Drive 등)는 새 PC에서 재인증이 필요하다.
-- `.mcp.json`, `.cursor/`가 untracked 상태다. 필요하면 커밋하거나 수동으로 옮길 것.
+- **이 저장소는 public이다.** `구매 견적 예제/`에는 실제 기관·업체명과 거래정보가
+  담긴 견적서 PDF가 있다. gitignore로 막아뒀지만, `git add .`은 쓰지 말고
+  파일을 명시적으로 지정할 것. 한 번 푸시하면 히스토리에 남아 되돌리기 어렵다.
 
 ---
 
