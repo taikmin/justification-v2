@@ -7,3 +7,10 @@ item_selection_examples.json
 item_selection_examples.js
 examples_extracted/
 .env
+
+# 실제 거래정보가 담긴 견적서 원본 — public 저장소에 올리지 말 것
+구매 견적 예제/
+
+# 로컬 에디터 / MCP 설정
+.cursor/
+.mcp.json
