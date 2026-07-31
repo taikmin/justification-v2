@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 from io import BytesIO
 from pathlib import Path
@@ -10,16 +11,38 @@ from pydantic import BaseModel
 EXAMPLES_JSON = Path(__file__).parent / "item_selection_examples.json"
 app = FastAPI(title="물품선정사유 자동생성")
 
+# Windows에서 claude는 claude.CMD 배치 파일이라 shell 없이는 해석되지 않음
+CLAUDE_BIN = shutil.which("claude")
+
 
 def call_claude(prompt: str) -> str:
-    """claude CLI를 subprocess로 호출."""
+    """claude CLI를 subprocess로 호출.
+
+    프롬프트는 argv가 아닌 stdin으로 전달한다. Windows의 claude.CMD 배치
+    래퍼는 여러 줄 인자를 첫 줄에서 잘라내므로 argv로 넘기면 프롬프트
+    대부분이 유실된다.
+    """
+    if not CLAUDE_BIN:
+        raise RuntimeError("claude CLI를 찾을 수 없음 (PATH 확인 필요)")
     result = subprocess.run(
-        ["claude", "-p", prompt],
-        capture_output=True, text=True, encoding="utf-8", timeout=60
+        [CLAUDE_BIN, "-p"],
+        input=prompt,
+        capture_output=True, text=True, encoding="utf-8", timeout=180
     )
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or "claude CLI 오류")
     return result.stdout.strip()
+
+
+def parse_json_response(text: str) -> dict:
+    """claude 응답에서 JSON 객체를 추출. 실패 시 원문을 오류에 포함."""
+    s, e = text.find("{"), text.rfind("}") + 1
+    if s == -1 or e <= s:
+        raise RuntimeError(f"JSON 응답이 아님: {text[:500]!r}")
+    try:
+        return json.loads(text[s:e])
+    except json.JSONDecodeError as err:
+        raise RuntimeError(f"JSON 파싱 실패 ({err}): {text[s:e][:500]!r}") from err
 
 
 # ── 예제 로딩 ─────────────────────────────────────────────────────────────────
@@ -129,9 +152,7 @@ def claude_extract(raw_text: str) -> dict:
 - 라벨이 없으면 실제로 돈을 내고 구매하는 물건/서비스 이름
 - JSON만 출력, 설명 없이"""
 
-    text = call_claude(prompt)
-    s, e = text.find("{"), text.rfind("}") + 1
-    return json.loads(text[s:e])
+    return parse_json_response(call_claude(prompt))
 
 
 class GenerateRequest(BaseModel):
@@ -196,9 +217,7 @@ def claude_generate(req: GenerateRequest, examples: list[dict]) -> dict:
   업체추천사유 → 첫 줄: "{vendor_header}", 다음 줄부터 본문
 - JSON만 출력"""
 
-    text = call_claude(prompt)
-    s, e = text.find("{"), text.rfind("}") + 1
-    return json.loads(text[s:e])
+    return parse_json_response(call_claude(prompt))
 
 
 # ── 엔드포인트 ─────────────────────────────────────────────────────────────────

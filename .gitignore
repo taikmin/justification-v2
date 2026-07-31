@@ -1,6 +1,8 @@
 __pycache__/
 *.pyc
 *.pyo
+.venv/
+venv/
 item_selection_examples.json
 item_selection_examples.js
 examples_extracted/
